@@ -243,6 +243,17 @@ join plants p on p.id = ps.plant_id;
 -- Row-level security: authenticated only
 -- ---------------------------------------------------------------------------
 
+alter table lists         enable row level security;
+alter table trait_defs    enable row level security;
+alter table producers     enable row level security;
+alter table plants        enable row level security;
+alter table crosses       enable row level security;
+alter table seed_lots     enable row level security;
+alter table sowings       enable row level security;
+alter table plant_seasons enable row level security;
+alter table tuber_lots    enable row level security;
+alter table photos        enable row level security;
+
 do $$
 declare t text;
 begin
@@ -250,7 +261,6 @@ begin
     'lists', 'trait_defs', 'producers', 'plants', 'crosses', 'seed_lots',
     'sowings', 'plant_seasons', 'tuber_lots', 'photos'
   ] loop
-    execute format('alter table %I enable row level security', t);
     execute format(
       'create policy "authenticated full access" on %I for all to authenticated using (true) with check (true)',
       t);
