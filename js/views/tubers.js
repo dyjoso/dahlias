@@ -1,7 +1,7 @@
 import { sb, q, refs, resolveProducer } from '../db.js';
 import {
   esc, plantLabel, seasonLabel, seasonOptions, getSeason, localDate, formView, plantOptions,
-  emptyState, TUBER_STATUS, seasonPicker, bindSeasonPicker,
+  emptyState, TUBER_STATUS, seasonPicker, bindSeasonPicker, comparePlants,
 } from '../ui.js';
 
 const tf = { status: 'all', source: 'all' };
@@ -11,11 +11,11 @@ export async function list(ctx) {
   ctx.page({ title: 'Tubers', right: '<a class="hbtn plus" href="#/tubers/new" aria-label="Add tubers">+</a>' });
   const [rows, plants, r] = await Promise.all([
     q(sb.from('tuber_lots').select('*').eq('season', season)),
-    q(sb.from('plants').select('id,code,name')),
+    q(sb.from('plants').select('id,code,name,origin')),
     refs(),
   ]);
   const plantById = Object.fromEntries(plants.map(p => [p.id, p]));
-  rows.sort((a, b) => plantLabel(plantById[a.plant_id]).localeCompare(plantLabel(plantById[b.plant_id])));
+  rows.sort((a, b) => comparePlants(plantById[a.plant_id], plantById[b.plant_id]));
   const total = st => rows.filter(t => st === 'all' || t.status === st).reduce((a, t) => a + t.quantity, 0);
 
   if (!ctx.render(`

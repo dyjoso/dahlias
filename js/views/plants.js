@@ -4,7 +4,7 @@ import {
 import {
   esc, plantLabel, plantLink, seasonLabel, seasonOptions, seasonOfDate, currentSeason, getSeason,
   fmtDate, localDate, formView, toast, errToast, listOptions, emptyState, groupBy, TUBER_STATUS,
-  seasonPicker, bindSeasonPicker,
+  seasonPicker, bindSeasonPicker, comparePlants,
 } from '../ui.js';
 
 const trialYear = (p, season) => (p.first_season ? season - p.first_season + 1 : null);
@@ -75,18 +75,30 @@ export async function list(ctx) {
       }
       return true;
     });
+    res.sort(comparePlants);
+    const item = p => {
+      const url = urls[latest.get(p.id)];
+      const ty = p.origin === 'seedling' ? trialYear(p, season) : null;
+      const n = inGarden.get(p.id);
+      const details = [p.form, p.size, p.colour].filter(Boolean).join(' · ');
+      // Cultivars lead with their name; seedlings with their code.
+      const title = p.origin === 'cultivar' && p.name
+        ? `${esc(p.name)} <span class="name">${esc(p.code)}</span>`
+        : `${esc(p.code)}${p.name ? ` <span class="name">${esc(p.name)}</span>` : ''}`;
+      return `<a class="item" href="#/plants/${p.id}">
+        <div class="thumb">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : '✿'}</div>
+        <div class="body"><div class="title">${title}</div>
+          <div class="sub">${esc(details || (p.origin === 'cultivar' ? 'Cultivar' : 'Seedling'))}</div></div>
+        <div class="meta">${ty > 0 ? `<span class="badge a">Y${ty}</span>` : ''}${n ? `<span class="badge g">×${n}</span>` : ''}</div>
+      </a>`;
+    };
+    const seedlings = res.filter(p => p.origin === 'seedling');
+    const cultivars = res.filter(p => p.origin === 'cultivar');
+    const group = (heading, items) => (items.length
+      ? `${filt.origin === 'all' ? `<h3 class="group">${heading} (${items.length})</h3>` : ''}<div class="list">${items.map(item).join('')}</div>`
+      : '');
     el.querySelector('#results').innerHTML = res.length
-      ? `<div class="count">${res.length} plant${res.length === 1 ? '' : 's'}</div><div class="list">${res.map(p => {
-        const url = urls[latest.get(p.id)];
-        const ty = p.origin === 'seedling' ? trialYear(p, season) : null;
-        const n = inGarden.get(p.id);
-        return `<a class="item" href="#/plants/${p.id}">
-          <div class="thumb">${url ? `<img src="${esc(url)}" alt="" loading="lazy">` : '✿'}</div>
-          <div class="body"><div class="title">${esc(p.code)}${p.name ? ` <span class="name">${esc(p.name)}</span>` : ''}</div>
-            <div class="sub">${esc([p.form, p.size, p.colour].filter(Boolean).join(' · ') || (p.origin === 'cultivar' ? 'Cultivar' : 'Seedling'))}</div></div>
-          <div class="meta">${ty > 0 ? `<span class="badge a">Y${ty}</span>` : ''}${n ? `<span class="badge g">×${n}</span>` : ''}</div>
-        </a>`;
-      }).join('')}</div>`
+      ? `<div class="count">${res.length} plant${res.length === 1 ? '' : 's'}</div>${group('My seedlings', seedlings)}${group('Cultivars', cultivars)}`
       : plants.length ? '<div class="empty">No plants match these filters.</div>'
         : emptyState('No plants yet. Add the cultivars you use as parents, then your kept seedlings.', '#/plants/new?origin=cultivar', 'Add a cultivar');
   };

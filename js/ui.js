@@ -61,10 +61,19 @@ export function plantLink(p) {
   return p ? `<a href="#/plants/${p.id}">${esc(plantLabel(p))}</a>` : '<span class="muted">unknown</span>';
 }
 
+// Cultivar codes (C-001…) are just ids in entry order, so cultivars sort by
+// name; seedling codes carry meaning (season-lot-number), so they sort by code.
+const byName = (a, b) => (a.name || a.code).localeCompare(b.name || b.code, 'en', { sensitivity: 'base', numeric: true });
+const byCode = (a, b) => a.code.localeCompare(b.code, 'en', { numeric: true });
+
+export function comparePlants(a, b) {
+  if (a.origin !== b.origin) return a.origin === 'seedling' ? -1 : 1;
+  return a.origin === 'cultivar' ? byName(a, b) : byCode(a, b);
+}
+
 export function plantOptions(plants) {
-  const cult = plants.filter(p => p.origin === 'cultivar')
-    .sort((a, b) => (a.name || a.code).localeCompare(b.name || b.code));
-  const own = plants.filter(p => p.origin === 'seedling').sort((a, b) => b.code.localeCompare(a.code));
+  const cult = plants.filter(p => p.origin === 'cultivar').sort(byName);
+  const own = plants.filter(p => p.origin === 'seedling').sort((a, b) => byCode(b, a));
   return [
     ...cult.map(p => ({ value: p.id, label: p.name ? `${p.name} (${p.code})` : p.code, group: 'Cultivars' })),
     ...own.map(p => ({ value: p.id, label: plantLabel(p), group: 'My seedlings' })),
