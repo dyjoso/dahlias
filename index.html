@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dahlias</title>
+<meta name="description" content="Dahlia breeding tracker">
+<meta name="theme-color" content="#f6f3f1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#141112" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dahlias">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/app.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<header id="top"><div class="hl"></div><h1></h1><div class="hr"></div></header>
+<main id="main"><div class="loading">Loading…</div></main>
+<nav id="tabs">
+  <a href="#/" data-tab="home">
+    <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</a>
+  <a href="#/plants" data-tab="plants">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.5"/><path d="M12 9.5C10 6 10.5 3 12 3s2 3 0 6.5M14.5 12c3.5-2 6.5-1.5 6.5 0s-3 2-6.5 0M12 14.5c2 3.5 1.5 6.5 0 6.5s-2-3 0-6.5M9.5 12C6 14 3 13.5 3 12s3-2 6.5 0"/></svg>Plants</a>
+  <a href="#/crosses" data-tab="breeding">
+    <svg viewBox="0 0 24 24"><circle cx="6" cy="5.5" r="2.5"/><circle cx="18" cy="5.5" r="2.5"/><circle cx="12" cy="18.5" r="2.5"/><path d="M6 8c0 4 6 4 6 8M18 8c0 4-6 4-6 8"/></svg>Breeding</a>
+  <a href="#/tubers" data-tab="tubers">
+    <svg viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/></svg>Tubers</a>
+  <a href="#/more" data-tab="more">
+    <svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>More</a>
+</nav>
+<div id="toast" class="toast" role="status"></div>
+<div id="lightbox" class="lightbox" hidden></div>
+</body>
+</html>
