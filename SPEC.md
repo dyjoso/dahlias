@@ -136,9 +136,10 @@ and colours reviewed by me 2026-10-03.
 
 - Plain HTML, CSS and JS (ES modules) with no build step. `supabase-js` comes from a CDN
 - Deployed to GitHub Pages from this repo
-- Login with an email one-time **code** (not a magic link: links open in Safari
-  and don't sign in the home-screen app). Sign-ups disabled, and row-level security
-  limits data to my user
+- Login with **email + password**; the session persists on the phone. (Magic links
+  open in Safari, not the home-screen app, and OTP-code emails need custom SMTP on
+  the free plan.) Sign-ups disabled, and row-level security limits data to
+  signed-in users
 - Photos go to a private Supabase Storage bucket, viewed through signed URLs
 
 ### Supabase free-tier caveats
