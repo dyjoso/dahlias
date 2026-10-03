@@ -59,7 +59,7 @@ function setHeader({ title = '', back = null, right = '' } = {}) {
   top.querySelector('h1').textContent = title;
   top.querySelector('.hl').innerHTML = back ? `<a class="back" href="${back}" aria-label="Back">‹</a>` : '';
   top.querySelector('.hr').innerHTML = right;
-  document.title = title ? `${title} · Dahlias` : 'Dahlias';
+  document.title = title && title !== 'Dahlias' ? `${title} · Dahlias` : 'Dahlias';
 }
 
 function setTab(tab) {
@@ -118,3 +118,7 @@ sb.auth.onAuthStateChange(event => {
 
 window.addEventListener('hashchange', render);
 render();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).catch(console.error);
+}
