@@ -3,7 +3,7 @@ import { getSeason, currentSeason, seasonPicker, bindSeasonPicker } from '../ui.
 
 export async function view(ctx) {
   const season = getSeason();
-  ctx.page({ title: 'Dahlias' });
+  ctx.page({ title: 'Stats' });
   const [crosses, lots, tubers, plants] = await Promise.all([
     q(sb.from('crosses').select('id').eq('season', season)),
     q(sb.from('seed_lots').select('id,seed_count').eq('season', season)),
@@ -33,15 +33,7 @@ export async function view(ctx) {
       <a class="tile" href="#/tubers"><div class="n">${stored}</div><div class="l">Tubers in storage</div></a>
       <a class="tile" href="#/stats"><div class="n">📊</div><div class="l">Parent stats</div></a>
     </div>
-    <h3 class="group">Quick add</h3>
-    <div class="actions">
-      <a class="btn" href="#/crosses/new">✚ Cross</a>
-      <a class="btn" href="#/seed/new">✚ Seed lot</a>
-      <a class="btn" href="#/seed">✚ Kept seedling</a>
-      <a class="btn" href="#/plants/new?origin=cultivar">✚ Cultivar</a>
-      <a class="btn" href="#/tubers/new">✚ Tubers</a>
-      <a class="btn" href="#/plants">📷 Photos</a>
-    </div>`)) return;
+`)) return;
 
   bindSeasonPicker(ctx.el);
   ctx.el.querySelector('#search').addEventListener('submit', e => {

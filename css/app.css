@@ -193,6 +193,11 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .actions .btn { justify-content: flex-start; }
 .searchbox { margin-bottom: 14px; }
 
+/* Plant summary photo */
+.summary .hero { float: right; width: 96px; height: 96px; margin: 0 0 8px 12px; padding: 0; border: 0; border-radius: 12px; overflow: hidden; background: var(--chip); }
+.summary .hero img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.summary::after { content: ""; display: block; clear: both; }
+
 /* Inline editing */
 .stepper { display: inline-flex; align-items: center; gap: 12px; }
 .stepper b { min-width: 24px; text-align: center; font-size: 17px; }

@@ -23,7 +23,7 @@ export { lotSummary };
 
 // --- List ----------------------------------------------------------------------
 
-const filt = { q: '', origin: 'all', garden: false, year: '', form: '', colour: '' };
+const filt = { q: '', origin: 'all', year: '', form: '', colour: '' };
 
 export async function list(ctx) {
   if (ctx.query.q !== undefined) filt.q = ctx.query.q;
@@ -44,7 +44,6 @@ export async function list(ctx) {
       <div class="chips">
         ${[['all', 'All'], ['seedling', 'My seedlings'], ['cultivar', 'Cultivars']]
           .map(([v, l]) => `<button class="chip${filt.origin === v ? ' on' : ''}" data-origin="${v}">${l}</button>`).join('')}
-        <button class="chip${filt.garden ? ' on' : ''}" id="garden">Growing now</button>
       </div>
       <div class="selects">
         <select id="year"><option value="">Any year</option>${[1, 2, 3, 4, 5]
@@ -62,7 +61,6 @@ export async function list(ctx) {
     const res = plants.filter(p => {
       if (filt.origin !== 'all' && p.origin !== filt.origin) return false;
       if (s && !p.code.toLowerCase().includes(s) && !(p.name || '').toLowerCase().includes(s)) return false;
-      if (filt.garden && !(p.count_growing > 0)) return false;
       if (filt.form && p.form !== filt.form) return false;
       if (filt.colour && p.colour !== filt.colour) return false;
       if (filt.year) {
@@ -105,7 +103,6 @@ export async function list(ctx) {
     el.querySelectorAll('[data-origin]').forEach(x => x.classList.toggle('on', x === b));
     draw();
   }));
-  el.querySelector('#garden').addEventListener('click', e => { filt.garden = !filt.garden; e.target.classList.toggle('on', filt.garden); draw(); });
   for (const k of ['year', 'form', 'colour']) el.querySelector(`#${k}`).addEventListener('change', e => { filt[k] = e.target.value; draw(); });
   draw();
 }
@@ -153,7 +150,8 @@ export async function detail(ctx) {
   const photosBySeason = groupBy(photos, 'season');
 
   if (!ctx.render(`
-    <section class="card">
+    <section class="card summary">
+      ${photos[0] ? `<button class="hero" data-photo="${photos[0].id}" aria-label="View photo"><img src="${esc(urls[thumbPath(photos[0].storage_path)] || '')}" alt=""></button>` : ''}
       <h2>${esc(p.name || p.code)}</h2>
       ${p.name ? `<div class="kv"><span>Code</span><b>${esc(p.code)}</b></div>` : ''}
       <div class="kv"><span>Type</span><span>${p.origin === 'seedling' ? 'My seedling' : 'Cultivar'}</span></div>

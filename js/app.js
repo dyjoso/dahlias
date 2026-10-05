@@ -10,7 +10,8 @@ import * as Login from './views/login.js';
 
 // [pattern, view, tab]. ":x" segments match numeric ids.
 const routes = [
-  ['', Home.view, 'home'],
+  ['', Plants.list, 'plants'],
+  ['summary', Home.view, 'summary'],
   ['plants', Plants.list, 'plants'],
   ['plants/new', Plants.form, 'plants'],
   ['plants/:id', Plants.detail, 'plants'],
