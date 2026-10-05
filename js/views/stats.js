@@ -2,8 +2,8 @@ import { sb, q, refs, graph, lotParents } from '../db.js';
 import { esc, plantLink, pct, groupBy } from '../ui.js';
 
 // Aggregate performance for a set of seed lots: seeds, germination, kept
-// seedlings, survival into later years, and trait results.
-function perf(lots, g, sowByLot, seasonsByPlant, traits) {
+// seedlings, how many are still growing, and their current traits.
+function perf(lots, g, sowByLot, traits) {
   const lotIds = new Set(lots.map(l => l.id));
   const seeds = lots.reduce((a, l) => a + (l.seed_count || 0), 0);
   let sown = 0, up = 0;
@@ -11,17 +11,13 @@ function perf(lots, g, sowByLot, seasonsByPlant, traits) {
     if (s.seeds_sown != null && s.germinated != null) { sown += s.seeds_sown; up += s.germinated; }
   }
   const kept = g.plants.filter(p => lotIds.has(p.seed_lot_id));
-  const reached = n => kept.filter(p => (seasonsByPlant.get(p.id) || [])
-    .some(s => p.first_season && s.season - p.first_season + 1 >= n)).length;
   const t = {};
   for (const d of traits) t[d.key] = { good: 0, n: 0 };
-  for (const p of kept) for (const s of seasonsByPlant.get(p.id) || []) {
-    for (const d of traits) {
-      const v = s.traits?.[d.key];
-      if (v) { t[d.key].n++; if (v === 'good') t[d.key].good++; }
-    }
+  for (const p of kept) for (const d of traits) {
+    const v = p.traits?.[d.key];
+    if (v) { t[d.key].n++; if (v === 'good') t[d.key].good++; }
   }
-  return { seeds, sown, up, kept: kept.length, y2: reached(2), y3: reached(3), traits: t };
+  return { seeds, sown, up, kept: kept.length, growing: kept.filter(p => p.count_growing > 0).length, traits: t };
 }
 
 function perfHtml(x, traits) {
@@ -33,19 +29,14 @@ function perfHtml(x, traits) {
   return `
     <div class="kv"><span>Seeds</span><span>${x.seeds}</span></div>
     <div class="kv"><span>Germination</span><span>${x.sown ? `${x.up}/${x.sown} · ${pct(x.up, x.sown)}` : '–'}</span></div>
-    <div class="kv"><span>Seedlings kept</span><span>${x.kept}${x.kept ? ` → Y2 ${x.y2} → Y3 ${x.y3}` : ''}</span></div>
+    <div class="kv"><span>Seedlings kept</span><span>${x.kept}${x.kept ? ` · ${x.growing} still growing` : ''}</span></div>
     ${traitRows ? `<div style="margin-top:8px">${traitRows}</div>` : ''}`;
 }
 
 export async function view(ctx) {
   ctx.page({ title: 'Parent stats', back: '#/more' });
-  const [g, r, sowings, seasons] = await Promise.all([
-    graph(), refs(),
-    q(sb.from('sowings').select('*')),
-    q(sb.from('plant_seasons').select('plant_id,season,traits')),
-  ]);
+  const [g, r, sowings] = await Promise.all([graph(), refs(), q(sb.from('sowings').select('*'))]);
   const sowByLot = groupBy(sowings, 'seed_lot_id');
-  const seasonsByPlant = groupBy(seasons, 'plant_id');
   const traits = r.activeTraits;
 
   // Lots per parent, split by role.
@@ -70,11 +61,11 @@ export async function view(ctx) {
 
   const parents = [...new Set([...roles.keys(), ...crossUses.keys()])].map(pid => {
     const e = roles.get(pid) || { seed: new Set(), pollen: new Set(), lots: new Map() };
-    return { pid, e, x: perf([...e.lots.values()], g, sowByLot, seasonsByPlant, traits) };
+    return { pid, e, x: perf([...e.lots.values()], g, sowByLot, traits) };
   }).sort((a, b) => b.x.kept - a.x.kept || b.x.seeds - a.x.seeds);
 
   const producers = [...groupBy(g.lots.filter(l => l.source === 'bought'), l => l.producer_id ?? 0).entries()]
-    .map(([pid, lots]) => ({ name: r.producerName(pid) || 'Unknown producer', lots, x: perf(lots, g, sowByLot, seasonsByPlant, traits) }))
+    .map(([pid, lots]) => ({ name: r.producerName(pid) || 'Unknown producer', lots, x: perf(lots, g, sowByLot, traits) }))
     .sort((a, b) => b.x.kept - a.x.kept);
 
   ctx.render(`

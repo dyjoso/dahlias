@@ -10,7 +10,7 @@ export function more(ctx) {
 }
 
 const LIST_KINDS = [['form', 'Forms'], ['size', 'Sizes'], ['colour', 'Colours']];
-const TABLES = ['plants', 'crosses', 'seed_lots', 'sowings', 'plant_seasons', 'tuber_lots', 'photos', 'producers', 'lists', 'trait_defs'];
+const TABLES = ['plants', 'crosses', 'seed_lots', 'sowings', 'tuber_lots', 'photos', 'producers', 'lists', 'trait_defs'];
 
 export async function view(ctx) {
   ctx.page({ title: 'Settings', back: '#/more' });

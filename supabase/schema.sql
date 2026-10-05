@@ -53,6 +53,11 @@ create table plants (
   size         text,
   colour       text,
   first_season int,
+  -- current state, updated as things change
+  traits        jsonb not null default '{}'::jsonb,  -- { trait_key: 'good' | 'poor' }
+  count_growing int  not null default 1 check (count_growing >= 0),
+  location      text,
+  overwinter    text check (overwinter in ('dug', 'left_in_ground')),
   notes        text,
   created_at   timestamptz not null default now(),
   check (origin = 'cultivar' or seed_lot_id is not null)
@@ -110,22 +115,8 @@ create table sowings (
 );
 
 -- ---------------------------------------------------------------------------
--- Seasons, tubers, photos
+-- Tubers, photos
 -- ---------------------------------------------------------------------------
-
-create table plant_seasons (
-  id            bigint generated always as identity primary key,
-  plant_id      bigint not null references plants (id) on delete cascade,
-  season        int  not null,
-  count_growing int  not null default 1 check (count_growing >= 0),
-  location      text,
-  overwinter    text check (overwinter in ('dug', 'left_in_ground')),
-  survived      boolean,                   -- null = unknown
-  traits        jsonb not null default '{}'::jsonb,  -- { trait_key: 'good' | 'poor' }
-  notes         text,
-  created_at    timestamptz not null default now(),
-  unique (plant_id, season)
-);
 
 create table tuber_lots (
   id               bigint generated always as identity primary key,
@@ -157,7 +148,6 @@ create index on crosses (seed_parent_id);
 create index on crosses (pollen_parent_id);
 create index on seed_lots (cross_id);
 create index on plants (seed_lot_id);
-create index on plant_seasons (season);
 create index on tuber_lots (plant_id);
 create index on tuber_lots (season);
 create index on photos (plant_id);
@@ -230,16 +220,6 @@ create trigger plants_code before insert or update on plants
   for each row execute function assign_plant_code();
 
 -- ---------------------------------------------------------------------------
--- Views
--- ---------------------------------------------------------------------------
-
-create view plant_seasons_v with (security_invoker = true) as
-select ps.*,
-       ps.season - p.first_season + 1 as trial_year
-from plant_seasons ps
-join plants p on p.id = ps.plant_id;
-
--- ---------------------------------------------------------------------------
 -- Row-level security: authenticated only
 -- ---------------------------------------------------------------------------
 
@@ -250,7 +230,6 @@ alter table plants        enable row level security;
 alter table crosses       enable row level security;
 alter table seed_lots     enable row level security;
 alter table sowings       enable row level security;
-alter table plant_seasons enable row level security;
 alter table tuber_lots    enable row level security;
 alter table photos        enable row level security;
 
@@ -259,7 +238,7 @@ declare t text;
 begin
   foreach t in array array[
     'lists', 'trait_defs', 'producers', 'plants', 'crosses', 'seed_lots',
-    'sowings', 'plant_seasons', 'tuber_lots', 'photos'
+    'sowings', 'tuber_lots', 'photos'
   ] loop
     execute format(
       'create policy "authenticated full access" on %I for all to authenticated using (true) with check (true)',
@@ -268,9 +247,6 @@ begin
     execute format('revoke all on %I from anon', t);
   end loop;
 end $$;
-
-grant select on plant_seasons_v to authenticated;
-revoke all on plant_seasons_v from anon;
 
 -- ---------------------------------------------------------------------------
 -- Photo storage (private bucket)

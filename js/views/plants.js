@@ -2,12 +2,13 @@ import {
   sb, q, refs, graph, plantParents, signedUrls, thumbPath, uploadPhoto, deletePhotoFiles,
 } from '../db.js';
 import {
-  esc, plantLabel, plantLink, seasonLabel, seasonOptions, seasonOfDate, currentSeason, getSeason,
+  esc, plantLabel, plantLink, seasonLabel, seasonOptions, seasonOfDate, currentSeason,
   fmtDate, localDate, formView, toast, errToast, listOptions, emptyState, groupBy, TUBER_STATUS,
-  seasonPicker, bindSeasonPicker, comparePlants,
+  comparePlants, traitControls,
 } from '../ui.js';
 
-const trialYear = (p, season) => (p.first_season ? season - p.first_season + 1 : null);
+// Current trial year: the season it was first grown is Year 1.
+const trialYear = p => (p.origin === 'seedling' && p.first_season ? currentSeason() - p.first_season + 1 : null);
 
 function lotSummary(lot, g, r) {
   if (lot.source === 'own') {
@@ -26,16 +27,13 @@ const filt = { q: '', origin: 'all', garden: false, year: '', form: '', colour: 
 
 export async function list(ctx) {
   if (ctx.query.q !== undefined) filt.q = ctx.query.q;
-  const season = getSeason();
   ctx.page({ title: 'Plants', right: '<a class="hbtn plus" href="#/plants/new" aria-label="New plant">+</a>' });
 
-  const [plants, rows, photos, r] = await Promise.all([
-    q(sb.from('plants').select('id,code,name,origin,form,size,colour,first_season').order('code')),
-    q(sb.from('plant_seasons').select('plant_id,count_growing').eq('season', season)),
+  const [plants, photos, r] = await Promise.all([
+    q(sb.from('plants').select('id,code,name,origin,form,size,colour,first_season,count_growing').order('code')),
     q(sb.from('photos').select('plant_id,storage_path').order('created_at', { ascending: false })),
     refs(),
   ]);
-  const inGarden = new Map(rows.map(x => [x.plant_id, x.count_growing]));
   const latest = new Map();
   for (const ph of photos) if (!latest.has(ph.plant_id)) latest.set(ph.plant_id, thumbPath(ph.storage_path));
   const urls = latest.size ? await signedUrls([...latest.values()]) : {};
@@ -46,8 +44,7 @@ export async function list(ctx) {
       <div class="chips">
         ${[['all', 'All'], ['seedling', 'My seedlings'], ['cultivar', 'Cultivars']]
           .map(([v, l]) => `<button class="chip${filt.origin === v ? ' on' : ''}" data-origin="${v}">${l}</button>`).join('')}
-        <button class="chip${filt.garden ? ' on' : ''}" id="garden">In garden</button>
-        ${seasonPicker()}
+        <button class="chip${filt.garden ? ' on' : ''}" id="garden">Growing now</button>
       </div>
       <div class="selects">
         <select id="year"><option value="">Any year</option>${[1, 2, 3, 4, 5]
@@ -59,18 +56,17 @@ export async function list(ctx) {
     <div id="results"></div>`)) return;
 
   const el = ctx.el;
-  bindSeasonPicker(el);
 
   const draw = () => {
     const s = filt.q.toLowerCase();
     const res = plants.filter(p => {
       if (filt.origin !== 'all' && p.origin !== filt.origin) return false;
       if (s && !p.code.toLowerCase().includes(s) && !(p.name || '').toLowerCase().includes(s)) return false;
-      if (filt.garden && !(inGarden.get(p.id) > 0)) return false;
+      if (filt.garden && !(p.count_growing > 0)) return false;
       if (filt.form && p.form !== filt.form) return false;
       if (filt.colour && p.colour !== filt.colour) return false;
       if (filt.year) {
-        const ty = trialYear(p, season);
+        const ty = trialYear(p);
         if (Number(filt.year) === 5 ? !(ty >= 5) : ty !== Number(filt.year)) return false;
       }
       return true;
@@ -78,8 +74,8 @@ export async function list(ctx) {
     res.sort(comparePlants);
     const item = p => {
       const url = urls[latest.get(p.id)];
-      const ty = p.origin === 'seedling' ? trialYear(p, season) : null;
-      const n = inGarden.get(p.id);
+      const ty = trialYear(p);
+      const n = p.count_growing;
       const details = [p.form, p.size, p.colour].filter(Boolean).join(' · ');
       // Cultivars lead with their name; seedlings with their code.
       const title = p.origin === 'cultivar' && p.name
@@ -116,12 +112,6 @@ export async function list(ctx) {
 
 // --- Detail --------------------------------------------------------------------
 
-function traitChips(traits, defs) {
-  return defs.filter(d => traits?.[d.key])
-    .map(d => `<span class="chip ${traits[d.key]}">${esc(d.name)}: ${esc(traits[d.key] === 'good' ? d.good_label : d.poor_label)}</span>`)
-    .join('');
-}
-
 function pedigreeHtml(p, g, r) {
   const par = plantParents(p, g);
   if (!par) return '';
@@ -145,9 +135,8 @@ function pedigreeHtml(p, g, r) {
 
 export async function detail(ctx) {
   const id = ctx.params.id;
-  const [g, seasons, photos, tubers, r] = await Promise.all([
+  const [g, photos, tubers, r] = await Promise.all([
     graph(),
-    q(sb.from('plant_seasons').select('*').eq('plant_id', id).order('season', { ascending: false })),
     q(sb.from('photos').select('*').eq('plant_id', id).order('taken_on', { ascending: false }).order('id', { ascending: false })),
     q(sb.from('tuber_lots').select('*').eq('plant_id', id).order('season', { ascending: false })),
     refs(),
@@ -171,20 +160,29 @@ export async function detail(ctx) {
       ${p.form ? `<div class="kv"><span>Form</span><span>${esc(p.form)}</span></div>` : ''}
       ${p.size ? `<div class="kv"><span>Size</span><span>${esc(p.size)}</span></div>` : ''}
       ${p.colour ? `<div class="kv"><span>Colour</span><span>${esc(p.colour)}</span></div>` : ''}
-      ${p.first_season ? `<div class="kv"><span>First season</span><span>${seasonLabel(p.first_season)}</span></div>` : ''}
-      ${p.notes ? `<p class="notes">${esc(p.notes)}</p>` : ''}
+      ${p.first_season ? `<div class="kv"><span>First season</span><span>${seasonLabel(p.first_season)}${trialYear(p) > 0 ? ` · now Year ${trialYear(p)}` : ''}</span></div>` : ''}
     </section>
 
-    <section class="card"><h2>Seasons <a href="#/plants/${id}/seasons/new">+ Add</a></h2>
-      ${seasons.length ? seasons.map(s => `<a class="season" href="#/seasons/${s.id}/edit">
-        <div class="row"><b>${seasonLabel(s.season)}</b>
-          ${p.first_season && p.origin === 'seedling' ? `<span class="badge a">Year ${s.season - p.first_season + 1}</span>` : ''}
-          <span class="badge g">×${s.count_growing} growing</span></div>
-        ${s.location ? `<div class="sub">Location: ${esc(s.location)}</div>` : ''}
-        ${s.overwinter ? `<div class="sub">Winter: ${s.overwinter === 'dug' ? 'dug' : 'left in ground'}${s.survived === true ? ' · survived' : s.survived === false ? ' · lost' : ''}</div>` : ''}
-        <div class="chips">${traitChips(s.traits, r.traits)}</div>
-        ${s.notes ? `<div class="sub notes">${esc(s.notes)}</div>` : ''}
-      </a>`).join('') : '<p class="muted">No season records yet.</p>'}
+    <section class="card" id="traits"><h2>Traits <small class="saved"></small></h2>
+      ${traitControls(r.activeTraits, p.traits)}
+      <small>Tap to update as you go. Changes save straight away.</small>
+    </section>
+
+    <section class="card"><h2>In the garden <small class="saved" id="garden-saved"></small></h2>
+      <div class="kv"><span>Growing now</span>
+        <span class="stepper"><button class="btn small" data-step="-1" aria-label="One fewer">−</button>
+          <b id="count">${p.count_growing}</b>
+          <button class="btn small" data-step="1" aria-label="One more">+</button></span></div>
+      <div class="field" style="margin-top:10px"><label class="fl"><span class="lbl">Location</span>
+        <input id="location" value="${esc(p.location || '')}" placeholder="e.g. Bed 2, back row"></label></div>
+      <div class="field"><span class="lbl">Over winter</span><div class="seg" id="overwinter">
+        ${[['', 'Not set'], ['dug', 'Dug'], ['left_in_ground', 'Left in ground']].map(([v, l]) =>
+          `<label><input type="radio" name="overwinter" value="${v}"${(p.overwinter || '') === v ? ' checked' : ''}><span>${l}</span></label>`).join('')}
+      </div></div>
+    </section>
+
+    <section class="card"><h2>Notes <small class="saved" id="notes-saved"></small></h2>
+      <textarea id="notes" rows="4" placeholder="Tap to add notes…">${esc(p.notes || '')}</textarea>
     </section>
 
     <section class="card"><h2>Photos <label>+ Add<input type="file" id="file" accept="image/*" multiple hidden></label></h2>
@@ -211,7 +209,54 @@ export async function detail(ctx) {
     </section>` : ''}
   `)) return;
 
-  ctx.el.querySelector('#file').addEventListener('change', async e => {
+  const el = ctx.el;
+  // Save a change to this plant straight away, showing a brief "Saved" note.
+  const save = async (patch, statusEl) => {
+    try {
+      await q(sb.from('plants').update(patch).eq('id', id));
+      Object.assign(p, patch);
+      if (statusEl) {
+        statusEl.textContent = 'Saved ✓';
+        clearTimeout(statusEl._t);
+        statusEl._t = setTimeout(() => { statusEl.textContent = ''; }, 1800);
+      }
+    } catch (err) {
+      errToast(err);
+    }
+  };
+
+  const traitsCard = el.querySelector('#traits');
+  traitsCard.addEventListener('change', () => {
+    const traits = { ...(p.traits || {}) };  // keeps values for hidden traits
+    for (const t of r.activeTraits) {
+      const v = traitsCard.querySelector(`input[name="trait_${t.key}"]:checked`)?.value;
+      if (v) traits[t.key] = v; else delete traits[t.key];
+    }
+    save({ traits }, traitsCard.querySelector('.saved'));
+  });
+
+  const gardenSaved = el.querySelector('#garden-saved');
+  let countTimer;
+  el.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
+    const n = Math.max(0, Number(el.querySelector('#count').textContent) + Number(b.dataset.step));
+    el.querySelector('#count').textContent = n;
+    clearTimeout(countTimer);
+    countTimer = setTimeout(() => save({ count_growing: n }, gardenSaved), 600);
+  }));
+  el.querySelector('#location').addEventListener('change', e => save({ location: e.target.value.trim() || null }, gardenSaved));
+  el.querySelector('#overwinter').addEventListener('change', e => save({ overwinter: e.target.value || null }, gardenSaved));
+
+  const notes = el.querySelector('#notes');
+  let notesTimer;
+  const saveNotes = () => {
+    clearTimeout(notesTimer);
+    const v = notes.value.trim() || null;
+    if (v !== (p.notes || null)) save({ notes: v }, el.querySelector('#notes-saved'));
+  };
+  notes.addEventListener('input', () => { clearTimeout(notesTimer); notesTimer = setTimeout(saveNotes, 1200); });
+  notes.addEventListener('blur', saveNotes);
+
+  el.querySelector('#file').addEventListener('change', async e => {
     const files = [...e.target.files];
     if (!files.length) return;
     const status = ctx.el.querySelector('#upload-status');
@@ -301,8 +346,9 @@ export async function form(ctx) {
     { name: 'size', label: 'Size', type: 'select', options: listOptions(r.sizes, p?.size) },
     { name: 'colour', label: 'Colour', type: 'select', options: listOptions(r.colours, p?.colour) },
     { name: 'first_season', label: 'First season', type: 'select', options: seasonOptions(), num: true, help: 'The season it was first grown — that season is Year 1.' },
-    { name: 'notes', label: 'Notes', type: 'textarea' },
   );
+  // Notes, traits and garden details are edited directly on the plant page.
+  if (!p) fields.push({ name: 'notes', label: 'Notes', type: 'textarea' });
 
   const values = p ? { ...p } : {
     origin: ctx.query.origin === 'cultivar' ? 'cultivar' : 'seedling',
@@ -329,54 +375,6 @@ export async function form(ctx) {
       await deletePhotoFiles(photos.map(x => x.storage_path)).catch(console.error);
       toast('Plant deleted');
       location.replace('#/plants');
-    } : null,
-  });
-}
-
-// --- Season form ----------------------------------------------------------------
-
-export async function seasonForm(ctx) {
-  let row = null;
-  let plantId = ctx.params.id;
-  if (ctx.params.sid) {
-    row = await q(sb.from('plant_seasons').select('*').eq('id', ctx.params.sid).single());
-    plantId = row.plant_id;
-  }
-  const [plant, prev, r] = await Promise.all([
-    q(sb.from('plants').select('*').eq('id', plantId).single()),
-    q(sb.from('plant_seasons').select('*').eq('plant_id', plantId).order('season', { ascending: false }).limit(1)),
-    refs(),
-  ]);
-  const back = `#/plants/${plantId}`;
-  const values = row ? { ...row } : {
-    season: getSeason(),
-    count_growing: prev[0]?.count_growing ?? 1,
-    location: prev[0]?.location ?? '',
-  };
-
-  const fields = [
-    { name: 'season', label: 'Season', type: 'select', options: seasonOptions(), num: true, required: true, blank: false,
-      help: plant.first_season && plant.origin === 'seedling' ? `First season ${seasonLabel(plant.first_season)} = Year 1.` : '' },
-    { name: 'count_growing', label: 'Number growing', type: 'number', num: true, default: 1, help: 'How many plants of this one are in the garden this season.' },
-    { name: 'location', label: 'Location', placeholder: 'e.g. Bed 2, back row' },
-    { name: 'traits', label: 'Traits', type: 'traits', traits: r.activeTraits, keep: row?.traits },
-    { name: 'overwinter', label: 'End of season', type: 'segment',
-      options: [{ value: '', label: 'Not yet' }, { value: 'dug', label: 'Dug' }, { value: 'left_in_ground', label: 'Left in ground' }] },
-    { name: 'survived', label: 'Survived the winter?', type: 'segment', bool: true, showIf: ['overwinter', 'dug|left_in_ground'],
-      options: [{ value: '', label: 'Unknown' }, { value: 'true', label: 'Yes' }, { value: 'false', label: 'No' }] },
-    { name: 'notes', label: 'Notes', type: 'textarea' },
-  ];
-
-  formView(ctx, {
-    title: `${plant.code} · ${row ? seasonLabel(row.season) : 'New season'}`, back, fields, values,
-    onSave: async d => {
-      if (row) await q(sb.from('plant_seasons').update(d).eq('id', row.id));
-      else await q(sb.from('plant_seasons').insert({ ...d, plant_id: plantId }));
-      location.replace(back);
-    },
-    onDelete: row ? async () => {
-      await q(sb.from('plant_seasons').delete().eq('id', row.id));
-      location.replace(back);
     } : null,
   });
 }

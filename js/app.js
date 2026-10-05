@@ -15,8 +15,6 @@ const routes = [
   ['plants/new', Plants.form, 'plants'],
   ['plants/:id', Plants.detail, 'plants'],
   ['plants/:id/edit', Plants.form, 'plants'],
-  ['plants/:id/seasons/new', Plants.seasonForm, 'plants'],
-  ['seasons/:sid/edit', Plants.seasonForm, 'plants'],
   ['crosses', Breeding.crossList, 'breeding'],
   ['crosses/new', Breeding.crossForm, 'breeding'],
   ['crosses/:id', Breeding.crossDetail, 'breeding'],

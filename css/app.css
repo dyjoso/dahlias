@@ -193,6 +193,12 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .actions .btn { justify-content: flex-start; }
 .searchbox { margin-bottom: 14px; }
 
+/* Inline editing */
+.stepper { display: inline-flex; align-items: center; gap: 12px; }
+.stepper b { min-width: 24px; text-align: center; font-size: 17px; }
+.card h2 small.saved { font-size: 13px; font-weight: 500; color: var(--good); }
+#traits .trait { margin-bottom: 8px; }
+
 /* Seasons */
 .season { display: block; color: var(--text); padding: 10px 0; border-bottom: 1px solid var(--line); }
 .season:last-child { border-bottom: 0; }

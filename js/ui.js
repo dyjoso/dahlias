@@ -104,7 +104,6 @@ export function toast(msg, isErr = false) {
 
 export function friendlyError(e) {
   const m = e?.message || String(e);
-  if (/plant_seasons_plant_id_season_key/.test(m)) return 'This plant already has a record for that season.';
   if (/violates foreign key constraint/.test(m) && /delete/.test(m)) return 'Can’t delete: other records still refer to this one.';
   if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No connection. Check your signal and try again.';
   return m;
@@ -137,9 +136,12 @@ function optionsHtml(opts, val) {
   return out;
 }
 
-function traitsHtml(f, val) {
-  const cur = val || {};
-  return f.traits.map(t => {
+const traitsHtml = (f, val) => traitControls(f.traits, val);
+
+// A row of –/good/poor buttons per trait (radio inputs named trait_<key>).
+export function traitControls(defs, current) {
+  const cur = current || {};
+  return defs.map(t => {
     const opts = [['', '–'], ['good', t.good_label], ['poor', t.poor_label]];
     return `<div class="trait"><span>${esc(t.name)}</span><div class="seg seg-sm">${opts
       .map(([k, l]) => `<label class="${k}"><input type="radio" name="trait_${t.key}" value="${k}"${(cur[t.key] ?? '') === k ? ' checked' : ''}><span>${esc(l)}</span></label>`)
