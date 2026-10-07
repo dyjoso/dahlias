@@ -7,14 +7,14 @@
 -- 1. Official classes, in the published order, with their millimetre limits
 update lists set description = v.descr, sort_order = v.n, active = true
 from (values
-  ('Pompon',       'not exceeding 50mm',     1),
-  ('Micro',        'not exceeding 60mm',     2),
-  ('Large Pompon', '51-80mm, pompons only',  3),
-  ('Miniature',    'not exceeding 115mm',    4),
-  ('Small',        '115-155mm',              5),
-  ('Medium',       '155-200mm',              6),
-  ('Large',        '200-250mm',              7),
-  ('Giant',        'over 250mm',             8)
+  ('Pompon',       'not exceeding 5cm',     1),
+  ('Micro',        'not exceeding 6cm',     2),
+  ('Large Pompon', '5.1-8cm, pompons only',  3),
+  ('Miniature',    'not exceeding 11.5cm',    4),
+  ('Small',        '11.5-15.5cm',              5),
+  ('Medium',       '15.5-20cm',              6),
+  ('Large',        '20-25cm',              7),
+  ('Giant',        'over 25cm',             8)
 ) as v(label, descr, n)
 where lists.kind = 'size' and lists.label = v.label;
 

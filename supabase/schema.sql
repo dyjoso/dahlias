@@ -295,14 +295,14 @@ insert into lists (kind, label, sort_order) values
   ('colour', 'Variegated', 14);
 
 insert into lists (kind, label, description, sort_order) values
-  ('size', 'Pompon',       'not exceeding 50mm',    1),
-  ('size', 'Micro',        'not exceeding 60mm',    2),
-  ('size', 'Large Pompon', '51-80mm, pompons only', 3),
-  ('size', 'Miniature',    'not exceeding 115mm',   4),
-  ('size', 'Small',        '115-155mm',             5),
-  ('size', 'Medium',       '155-200mm',             6),
-  ('size', 'Large',        '200-250mm',             7),
-  ('size', 'Giant',        'over 250mm',            8);
+  ('size', 'Pompon',       'not exceeding 5cm',    1),
+  ('size', 'Micro',        'not exceeding 6cm',    2),
+  ('size', 'Large Pompon', '5.1-8cm, pompons only', 3),
+  ('size', 'Miniature',    'not exceeding 11.5cm',   4),
+  ('size', 'Small',        '11.5-15.5cm',             5),
+  ('size', 'Medium',       '15.5-20cm',             6),
+  ('size', 'Large',        '20-25cm',             7),
+  ('size', 'Giant',        'over 25cm',            8);
 
 insert into trait_defs (key, name, good_label, poor_label, sort_order) values
   ('stem',     'Stem',        'Strong',     'Weak',       1),
