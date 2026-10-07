@@ -4,7 +4,7 @@
 --
 -- Run once: Supabase > SQL Editor > New query > paste > Run. (Safe to re-run.)
 
--- 1. Official classes, in the published order, with their millimetre limits
+-- 1. Official classes, in the published order, with their size limits (cm)
 update lists set description = v.descr, sort_order = v.n, active = true
 from (values
   ('Pompon',       'not exceeding 5cm',     1),
