@@ -21,6 +21,7 @@ export async function view(ctx) {
     return `<section class="card"><h2>${title}</h2>
       ${items.map((l, i) => `<div class="edit-row${l.active ? '' : ' off'}">
         <input type="text" value="${esc(l.label)}" data-list-label="${l.id}" aria-label="Name">
+        ${kind === 'size' ? `<input type="text" value="${esc(l.description || '')}" data-list-desc="${l.id}" placeholder="Size limit" aria-label="Size limit">` : ''}
         <button class="btn small" data-move="${l.id}" data-dir="-1"${i === 0 ? ' disabled' : ''} aria-label="Move up">↑</button>
         <button class="btn small" data-move="${l.id}" data-dir="1"${i === items.length - 1 ? ' disabled' : ''} aria-label="Move down">↓</button>
         <button class="btn small" data-toggle="${l.id}">${l.active ? 'Hide' : 'Show'}</button>
@@ -75,6 +76,9 @@ export async function view(ctx) {
     await q(sb.from('plants').update({ [item.kind]: label }).eq(item.kind, item.label));
     item.label = label;
   }, 'Renamed')));
+  el.querySelectorAll('[data-list-desc]').forEach(inp => inp.addEventListener('change', () => run(async () => {
+    await q(sb.from('lists').update({ description: inp.value.trim() || null }).eq('id', Number(inp.dataset.listDesc)));
+  })));
   el.querySelectorAll('[data-move]').forEach(b => b.addEventListener('click', () => run(async () => {
     const item = r.lists.find(l => l.id === Number(b.dataset.move));
     const items = r.lists.filter(l => l.kind === item.kind);

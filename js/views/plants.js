@@ -156,7 +156,10 @@ export async function detail(ctx) {
       ${p.name ? `<div class="kv"><span>Code</span><b>${esc(p.code)}</b></div>` : ''}
       <div class="kv"><span>Type</span><span>${p.origin === 'seedling' ? 'My seedling' : 'Cultivar'}</span></div>
       ${p.form ? `<div class="kv"><span>Form</span><span>${esc(p.form)}</span></div>` : ''}
-      ${p.size ? `<div class="kv"><span>Size</span><span>${esc(p.size)}</span></div>` : ''}
+      ${p.size ? `<div class="kv"><span>Size</span><span>${esc(p.size)}${(() => {
+        const limit = r.sizes.find(s => s.label === p.size)?.description;
+        return limit ? `<br><small>${esc(limit)}</small>` : '';
+      })()}</span></div>` : ''}
       ${p.colour ? `<div class="kv"><span>Colour</span><span>${esc(p.colour)}</span></div>` : ''}
       ${p.first_season ? `<div class="kv"><span>First season</span><span>${seasonLabel(p.first_season)}${trialYear(p) > 0 ? ` · now Year ${trialYear(p)}` : ''}</span></div>` : ''}
     </section>
