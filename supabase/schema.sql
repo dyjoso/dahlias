@@ -312,3 +312,21 @@ insert into trait_defs (key, name, good_label, poor_label, sort_order) values
   ('flowering','Flowering',   'Productive', 'Shy',        5),
   ('petals',   'Petal count', 'High',       'Low',        6),
   ('tubers',   'Tubers',      'Good',       'Poor',       7);
+
+-- ---------------------------------------------------------------------------
+-- Keep-alive for the scheduled GitHub Action (free projects pause when idle).
+-- Runs a real query but returns nothing, so it is safe for anon to call.
+-- ---------------------------------------------------------------------------
+
+create or replace function public.keepalive()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform 1 from plants limit 1;
+end $$;
+
+revoke all on function public.keepalive() from public;
+grant execute on function public.keepalive() to anon, authenticated;
