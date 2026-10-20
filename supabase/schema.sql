@@ -244,6 +244,7 @@ begin
       'create policy "authenticated full access" on %I for all to authenticated using (true) with check (true)',
       t);
     execute format('grant select, insert, update, delete on %I to authenticated', t);
+    execute format('grant select, insert, update, delete on %I to service_role', t);
     execute format('revoke all on %I from anon', t);
   end loop;
 end $$;
