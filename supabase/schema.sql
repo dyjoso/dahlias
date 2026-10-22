@@ -316,18 +316,35 @@ insert into trait_defs (key, name, good_label, poor_label, sort_order) values
 
 -- ---------------------------------------------------------------------------
 -- Keep-alive for the scheduled GitHub Action (free projects pause when idle).
--- Runs a real query but returns nothing, so it is safe for anon to call.
+-- The job writes and reads this one-row table as the ordinary anon role, so it
+-- counts as user database activity. It holds only a timestamp and a counter.
 -- ---------------------------------------------------------------------------
+
+create table public.heartbeat (
+  id        int primary key default 1 check (id = 1),
+  pinged_at timestamptz not null default now(),
+  pings     bigint not null default 0
+);
+insert into public.heartbeat (id) values (1);
+
+alter table public.heartbeat enable row level security;
+create policy "heartbeat read" on public.heartbeat
+  for select to anon, authenticated using (true);
+create policy "heartbeat update" on public.heartbeat
+  for update to anon, authenticated using (id = 1) with check (id = 1);
+
+revoke all on public.heartbeat from anon, authenticated;
+grant select, update on public.heartbeat to anon, authenticated;
+grant select, insert, update, delete on public.heartbeat to service_role;
 
 create or replace function public.keepalive()
 returns void
-language plpgsql
-security definer
+language sql
+security invoker
 set search_path = public
 as $$
-begin
-  perform 1 from plants limit 1;
-end $$;
+  update public.heartbeat set pinged_at = now(), pings = pings + 1 where id = 1;
+$$;
 
 revoke all on function public.keepalive() from public;
 grant execute on function public.keepalive() to anon, authenticated;

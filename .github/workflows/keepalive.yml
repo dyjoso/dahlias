@@ -1,23 +1,42 @@
-# Free Supabase projects pause after ~7 days without activity.
-# This calls the keepalive() database function (supabase/migrate_005_keepalive.sql)
-# every day, which runs a real query so it counts as activity.
+# Free Supabase projects pause after ~7 days without "user database activity".
+# Five times a day this writes and then reads the one-row heartbeat table as
+# the ordinary anon role (see supabase/migrate_006_heartbeat.sql).
+#
+# GitHub cron times are fixed, so each scheduled run first waits a random
+# 0-4 hours: the five pings land at different times within each ~5-hour window.
 name: Keep Supabase awake
 
 on:
   schedule:
-    - cron: '17 3 * * *'
+    - cron: '7 0,5,10,15,20 * * *'
   workflow_dispatch:
+
+env:
+  SUPABASE_URL: https://vnozbfquhuimrfhwhabl.supabase.co
+  SUPABASE_KEY: sb_publishable_I4Qr-HguGHNmY_FAMPK5ZQ_Qzk_Gnol
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     steps:
-      - name: Call keepalive()
+      - name: Random delay (scheduled runs only)
+        if: github.event_name == 'schedule'
         run: |
-          code=$(curl -s -o response.txt -w '%{http_code}' -X POST \
-            'https://vnozbfquhuimrfhwhabl.supabase.co/rest/v1/rpc/keepalive' \
-            -H 'apikey: sb_publishable_I4Qr-HguGHNmY_FAMPK5ZQ_Qzk_Gnol' \
-            -H 'Content-Type: application/json' -d '{}')
-          echo "HTTP $code"; cat response.txt; echo
-          # Fail loudly (GitHub emails you) unless the query actually ran.
+          delay=$(( $(od -An -N2 -tu2 /dev/urandom) % 14400 ))
+          echo "Waiting $((delay / 60)) minutes"
+          sleep "$delay"
+
+      - name: Write heartbeat (keepalive)
+        run: |
+          code=$(curl -s -o out.txt -w '%{http_code}' -X POST "$SUPABASE_URL/rest/v1/rpc/keepalive" \
+            -H "apikey: $SUPABASE_KEY" -H 'Content-Type: application/json' -d '{}')
+          echo "HTTP $code"; cat out.txt; echo
+          test "$code" -ge 200 -a "$code" -lt 300
+
+      - name: Read heartbeat
+        run: |
+          code=$(curl -s -o out.txt -w '%{http_code}' "$SUPABASE_URL/rest/v1/heartbeat?select=pinged_at,pings" \
+            -H "apikey: $SUPABASE_KEY")
+          echo "HTTP $code"; cat out.txt; echo
           test "$code" -ge 200 -a "$code" -lt 300
