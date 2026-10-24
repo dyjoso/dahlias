@@ -27,7 +27,10 @@ create table trait_defs (
   good_label  text not null,
   poor_label  text not null,
   sort_order  int  not null default 0,
-  active      boolean not null default true
+  active      boolean not null default true,
+  -- descriptive (not good/bad) trait: shown low / Average / high, uncoloured;
+  -- poor_label is the low end, good_label the high end
+  neutral     boolean not null default false
 );
 
 create table producers (
@@ -305,14 +308,18 @@ insert into lists (kind, label, description, sort_order) values
   ('size', 'Large',        '20-25cm',             7),
   ('size', 'Giant',        'over 25cm',            8);
 
-insert into trait_defs (key, name, good_label, poor_label, sort_order) values
-  ('stem',     'Stem',        'Strong',     'Weak',       1),
-  ('neck',     'Neck',        'Strong',     'Weak',       2),
-  ('angle',    'Head angle',  'Faces up',   'Faces down', 3),
-  ('vigour',   'Vigour',      'Good',       'Poor',       4),
-  ('flowering','Flowering',   'Productive', 'Shy',        5),
-  ('petals',   'Petal count', 'High',       'Low',        6),
-  ('tubers',   'Tubers',      'Good',       'Poor',       7);
+-- Every trait also has a middle "Average" option, which is the default
+-- (a plant with no value for a trait counts as Average).
+insert into trait_defs (key, name, good_label, poor_label, sort_order, neutral) values
+  ('stem',        'Stem',        'Strong',     'Weak',       1, false),
+  ('stem_length', 'Stem length', 'Long',       'Short',      2, true),
+  ('neck',        'Neck',        'Strong',     'Weak',       3, false),
+  ('angle',       'Head angle',  'Faces up',   'Faces down', 4, false),
+  ('vigour',      'Vigour',      'Good',       'Poor',       5, false),
+  ('plant_size',  'Plant size',  'Tall',       'Short',      6, true),
+  ('flowering',   'Flowering',   'Productive', 'Shy',        7, false),
+  ('petals',      'Petal count', 'High',       'Low',        8, false),
+  ('tubers',      'Tubers',      'Good',       'Poor',       9, false);
 
 -- ---------------------------------------------------------------------------
 -- Keep-alive for the scheduled GitHub Action (free projects pause when idle).

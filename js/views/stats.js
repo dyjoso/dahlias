@@ -1,5 +1,5 @@
 import { sb, q, refs, graph, lotParents } from '../db.js';
-import { esc, plantLink, pct, groupBy } from '../ui.js';
+import { esc, plantLink, pct, groupBy, traitOptions, traitValue } from '../ui.js';
 
 // Aggregate performance for a set of seed lots: seeds, germination, kept
 // seedlings, how many are still growing, and their current traits.
@@ -11,21 +11,21 @@ function perf(lots, g, sowByLot, traits) {
     if (s.seeds_sown != null && s.germinated != null) { sown += s.seeds_sown; up += s.germinated; }
   }
   const kept = g.plants.filter(p => lotIds.has(p.seed_lot_id));
+  // Count each kept seedling's current value per trait (unset = average).
   const t = {};
-  for (const d of traits) t[d.key] = { good: 0, n: 0 };
-  for (const p of kept) for (const d of traits) {
-    const v = p.traits?.[d.key];
-    if (v) { t[d.key].n++; if (v === 'good') t[d.key].good++; }
-  }
+  for (const d of traits) t[d.key] = { good: 0, average: 0, poor: 0 };
+  for (const p of kept) for (const d of traits) t[d.key][traitValue(p.traits, d.key)]++;
   return { seeds, sown, up, kept: kept.length, growing: kept.filter(p => p.count_growing > 0).length, traits: t };
 }
 
 function perfHtml(x, traits) {
-  const traitRows = traits.filter(d => x.traits[d.key].n).map(d => {
-    const { good, n } = x.traits[d.key];
-    return `<div class="statline"><span>${esc(d.name)}</span><span>${good}/${n} ${esc(d.good_label.toLowerCase())}</span></div>
-      <div class="bar"><i style="width:${(100 * good) / n}%"></i></div>`;
-  }).join('');
+  const traitRows = x.kept ? traits.map(d => {
+    const c = x.traits[d.key];
+    const opts = traitOptions(d);
+    return `<div class="statline"><span>${esc(d.name)}</span>
+        <span>${opts.map(([k, l]) => `${c[k]} ${esc(l.toLowerCase())}`).join(' · ')}</span></div>
+      <div class="bar3${d.neutral ? ' neutral' : ''}">${opts.map(([k]) => `<i class="${k}" style="width:${(100 * c[k]) / x.kept}%"></i>`).join('')}</div>`;
+  }).join('') : '';
   return `
     <div class="kv"><span>Seeds</span><span>${x.seeds}</span></div>
     <div class="kv"><span>Germination</span><span>${x.sown ? `${x.up}/${x.sown} · ${pct(x.up, x.sown)}` : '–'}</span></div>

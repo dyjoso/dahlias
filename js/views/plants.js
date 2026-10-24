@@ -231,7 +231,8 @@ export async function detail(ctx) {
     const traits = { ...(p.traits || {}) };  // keeps values for hidden traits
     for (const t of r.activeTraits) {
       const v = traitsCard.querySelector(`input[name="trait_${t.key}"]:checked`)?.value;
-      if (v) traits[t.key] = v; else delete traits[t.key];
+      // Average is the default, so it's stored as "no value"
+      if (v && v !== 'average') traits[t.key] = v; else delete traits[t.key];
     }
     save({ traits }, traitsCard.querySelector('.saved'));
   });

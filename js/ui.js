@@ -138,13 +138,23 @@ function optionsHtml(opts, val) {
 
 const traitsHtml = (f, val) => traitControls(f.traits, val);
 
-// A row of –/good/poor buttons per trait (radio inputs named trait_<key>).
+// The three choices for a trait, in display order. A trait with no stored value
+// counts as 'average'. Neutral (descriptive) traits run low -> high and aren't
+// coloured good/bad; for them poor_label is the low end, good_label the high.
+export function traitOptions(t) {
+  return t.neutral
+    ? [['poor', t.poor_label], ['average', 'Average'], ['good', t.good_label]]
+    : [['good', t.good_label], ['average', 'Average'], ['poor', t.poor_label]];
+}
+
+export const traitValue = (traits, key) => traits?.[key] || 'average';
+
+// A row of three buttons per trait (radio inputs named trait_<key>).
 export function traitControls(defs, current) {
-  const cur = current || {};
   return defs.map(t => {
-    const opts = [['', '–'], ['good', t.good_label], ['poor', t.poor_label]];
-    return `<div class="trait"><span>${esc(t.name)}</span><div class="seg seg-sm">${opts
-      .map(([k, l]) => `<label class="${k}"><input type="radio" name="trait_${t.key}" value="${k}"${(cur[t.key] ?? '') === k ? ' checked' : ''}><span>${esc(l)}</span></label>`)
+    const cur = traitValue(current, t.key);
+    return `<div class="trait"><span>${esc(t.name)}</span><div class="seg seg-sm">${traitOptions(t)
+      .map(([k, l]) => `<label class="${t.neutral ? '' : k}"><input type="radio" name="trait_${t.key}" value="${k}"${cur === k ? ' checked' : ''}><span>${esc(l)}</span></label>`)
       .join('')}</div></div>`;
   }).join('');
 }
@@ -205,7 +215,7 @@ export function readForm(form, fields) {
       const t = {};
       for (const d of f.traits) {
         const x = form.elements[`trait_${d.key}`]?.value;
-        if (x) t[d.key] = x;
+        if (x && x !== 'average') t[d.key] = x;
       }
       out[f.name] = { ...(f.keep || {}), ...t };
       for (const d of f.traits) if (!t[d.key]) delete out[f.name][d.key];
